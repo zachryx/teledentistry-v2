@@ -7,8 +7,8 @@ export interface AuthUserPayload {
   role?: string;
 }
 
-export const authGuard = (app: Elysia) =>
-  app.derive(async ({ headers, jwt }) => {
+export const authGuard = <App extends Elysia<any, any, any, any, any, any, any>>(app: App) =>
+  app.derive(async ({ headers, jwt }: any) => {
     const auth = headers.authorization;
     if (!auth || !auth.startsWith('Bearer ')) {
       throw new HttpError(401, 'Missing or invalid authorization header');
@@ -23,13 +23,14 @@ export const authGuard = (app: Elysia) =>
     };
   });
 
-export const requireRole = (...roles: string[]) => (app: Elysia) =>
-  app.guard({
-    beforeHandle({ user }) {
-      if (!user || !roles.includes(user.role)) throw new HttpError(403, 'Forbidden');
-    },
-  });
+export const requireRole = (...roles: string[]) =>
+  <App extends Elysia<any, any, any, any, any, any, any>>(app: App) =>
+    app.guard({
+      beforeHandle({ user }: any) {
+        if (!user || !roles.includes(user.role)) throw new HttpError(403, 'Forbidden');
+      },
+    });
 
 export function assertRole(user: { role?: string } | undefined, ...roles: string[]) {
-  if (!user || !roles.includes(user.role)) throw new HttpError(403, 'Forbidden');
+  if (!user || !user.role || !roles.includes(user.role)) throw new HttpError(403, 'Forbidden');
 }

@@ -22,7 +22,7 @@ export async function getUsers(query: any): Promise<UserDocument[]> {
     delete searchQuery.search;
   }
 
-  return UserModel.find(searchQuery as FilterQuery<UserDocument>).lean();
+  return UserModel.find(searchQuery as FilterQuery<UserDocument>).lean() as any;
 }
 
 export async function findByEmail(email: string): Promise<UserDocument | null> {

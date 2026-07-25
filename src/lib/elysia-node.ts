@@ -1,7 +1,6 @@
 import http from 'http';
-import { Elysia } from 'elysia';
 
-export function attachElysiaToNodeServer(server: http.Server, app: Elysia) {
+export function attachElysiaToNodeServer(server: http.Server, app: { fetch(req: Request): Response | Promise<Response> }) {
   server.on('request', async (req: http.IncomingMessage, res: http.ServerResponse) => {
     try {
       const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);

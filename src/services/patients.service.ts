@@ -31,7 +31,7 @@ export async function findHubPatients(
     filter.$or = [{ full_name: regex }, { email: regex }];
   }
 
-  return PatientModel.find(filter as FilterQuery<PatientDocument>).lean();
+  return PatientModel.find(filter as FilterQuery<PatientDocument>).lean() as any;
 }
 
 export async function findById(id: string): Promise<PatientDocument | null> {

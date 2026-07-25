@@ -547,7 +547,7 @@ describe('health & swagger', () => {
       '/api/v1/stats/', '/api/v1/misc/aws/upload', '/api/v1/misc/aws/delete',
     ];
     for (const p of expected) {
-      expect(spec.paths[p]).toBeDefined(`missing swagger path: ${p}`);
+      expect(spec.paths[p]).toBeDefined();
     }
   });
 

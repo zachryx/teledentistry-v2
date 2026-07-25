@@ -87,7 +87,7 @@ patientSchema.pre('save', async function (next) {
 
   const highestPatientId = await patientModel.findOne().sort({ patient_id: -1 });
 
-  (this as any).patient_id = highestPatientId ? highestPatientId.patient_id + 1 : 1;
+  (this as any).patient_id = highestPatientId ? Number(highestPatientId.patient_id) + 1 : 1;
 
   next();
 });

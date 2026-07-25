@@ -23,7 +23,7 @@ export const miscRoutes = (app: Elysia) =>
           destination: '',
           filename: file.name,
           path: '',
-        } as Express.Multer.File;
+        } as any;
         return uploadFileToS3(multerFile).then((fileUrl) => ({
           success: true,
           message: 'File uploaded successfully',

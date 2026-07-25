@@ -1,13 +1,19 @@
 import { S3 } from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
+interface UploadFile {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+}
+
 const s3 = new S3({
   region: process.env.AWS_REGION,
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });
 
-export async function uploadFileToS3(file: Express.Multer.File): Promise<string> {
+export async function uploadFileToS3(file: UploadFile): Promise<string> {
   const bucket = process.env.AWS_BUCKET_NAME;
   if (!bucket) {
     throw new Error('AWS_BUCKET_NAME not configured');
