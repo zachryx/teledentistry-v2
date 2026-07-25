@@ -33,60 +33,42 @@ function checkRateLimit(request: Request) {
   const count = (rateLimits.get(ip) || 0) + 1;
   rateLimits.set(ip, count);
   setTimeout(() => rateLimits.delete(ip), 60000);
-  if (count > 15) throw new HttpError(429, 'Too many requests');
+  if (count > 100) throw new HttpError(429, 'Too many requests');
 }
 
 export const authRoutes = (app: Elysia) =>
   app.group('/api/v1/auth', (app) =>
     app.onBeforeHandle(({ request }) => { if (request.method === 'POST') checkRateLimit(request); })
-        .post('/register', ({ body }) => {
+        .post('/register', async ({ body }) => {
           const data = validateBody(registerSchema, body as any);
-          return registerUser(data).then((user) => ({
-            success: true,
-            message: 'user registered successfully',
-            data: user,
-          }));
+          const user = await registerUser(data);
+          return { success: true, message: 'user registered successfully', data: user };
         }, { body: authRegisterBody, response: successResponse })
-        .post('/login', ({ body }) => {
+        .post('/login', async ({ body }) => {
           const { email, password } = validateBody(loginSchema, body as any);
-          return loginUser(email, password).then(({ user, tokens }) => ({
-            success: true,
-            message: 'user logged in successfully',
-            data: { user, tokens },
-          }));
+          const { user, tokens } = await loginUser(email, password);
+          return { success: true, message: 'user logged in successfully', data: { user, tokens } };
         }, { body: authLoginBody, response: successResponse })
-        .post('/refresh-token', ({ body }) => {
+        .post('/refresh-token', async ({ body }) => {
           const { token } = validateBody(refreshTokenSchema, body as any);
-          return refreshAccessToken(token).then((tokens) => ({
-            success: true,
-            message: 'access token refreshed successfully',
-            data: tokens,
-          }));
+          const tokens = await refreshAccessToken(token);
+          return { success: true, message: 'access token refreshed successfully', data: tokens };
         }, { body: refreshTokenBody, response: successResponse })
-        .post('/reset-password', ({ body }) => {
+        .post('/reset-password', async ({ body }) => {
           const { email } = validateBody(resetPasswordRequestSchema, body as any);
-          return forwardPasswordResetMail(email).then(() => ({
-            success: true,
-            message: 'Password reset mail sent successfully',
-          }));
+          await forwardPasswordResetMail(email);
+          return { success: true, message: 'Password reset mail sent successfully' };
         }, { body: resetPasswordRequestBody, response: successResponse })
-        .patch('/reset-password', ({ body }) => {
+        .patch('/reset-password', async ({ body }) => {
           const { token, password } = validateBody(resetPasswordUpdateSchema, body as any);
-          return resetPassword(token, password).then(() => ({
-            success: true,
-            message: 'User password reset successfully',
-          }));
+          await resetPassword(token, password);
+          return { success: true, message: 'User password reset successfully' };
         }, { body: resetPasswordUpdateBody, response: successResponse }),
     )
     .group('/api/v1/auth', (app) =>
-      app.use(authGuard).get('/me', ({ user }) =>
-        findById(user.id).then((u) => {
-          if (!u) throw new HttpError(404, 'User not found');
-          return {
-            success: true,
-            message: 'auth user fetched successfully',
-            data: u,
-          };
-        })
-      , { response: successResponse }),
+      app.use(authGuard).get('/me', async ({ user }) => {
+        const u = await findById(user.id);
+        if (!u) throw new HttpError(404, 'User not found');
+        return { success: true, message: 'auth user fetched successfully', data: u };
+      }, { response: successResponse }),
     );

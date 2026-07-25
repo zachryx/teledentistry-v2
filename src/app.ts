@@ -1,10 +1,13 @@
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
+import { jwt } from '@elysiajs/jwt';
+import { cron } from '@elysiajs/cron';
 import { successResponse } from './swagger-schemas';
 import mongoose from 'mongoose';
 import { connectMongo } from './config/mongo';
 import { HttpError } from './guards/http-error';
+import { AppointmentModel, APPOINTMENT_STATUS } from './models/appointment.model';
 import { authRoutes } from './routes/auth';
 import { usersRoutes } from './routes/users';
 import { patientsRoutes } from './routes/patients';
@@ -16,7 +19,6 @@ import { adminRoutes } from './routes/admin';
 import { statsRoutes } from './routes/stats';
 import { miscRoutes } from './routes/misc';
 import { seedAdmin } from './seed';
-import { startAppointmentCron } from './cron';
 
 const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET'];
 for (const key of REQUIRED_ENV) {
@@ -29,22 +31,15 @@ for (const key of REQUIRED_ENV) {
 const app = new Elysia()
   .use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'] }))
   .use(swagger({ path: '/api-docs' }))
+  .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET! }))
   .onError(({ error, set }) => {
-    if (error instanceof HttpError) {
-      set.status = error.status;
-      return {
-        success: false,
-        message: error.message,
-        ...(error.details ? { errors: error.details } : {}),
-      };
-    }
-    const err = error as Error;
-    if ('status' in err) {
-      set.status = (err as any).status as number;
-      return { success: false, message: err.message };
+    const e = error as any;
+    if (e.status && typeof e.status === 'number') {
+      set.status = e.status;
+      return { success: false, message: e.message, ...(e.details ? { errors: e.details } : {}) };
     }
     set.status = 500;
-    return { success: false, message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message };
+    return { success: false, message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : e.message };
   })
   .onRequest(({ request }) => {
     console.log(`${request.method} ${request.url}`);
@@ -58,7 +53,23 @@ const app = new Elysia()
       db: dbOk ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
     };
-  }, { response: successResponse })
+  })
+  .use(cron({
+    name: 'appointment-cleanup',
+    pattern: '*/5 * * * *',
+    run: async () => {
+      const now = new Date();
+      await AppointmentModel.updateMany(
+        { status: APPOINTMENT_STATUS.PENDING, schedule_date: { $lt: now } },
+        { $set: { status: APPOINTMENT_STATUS.PASSED } },
+      );
+      const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
+      await AppointmentModel.updateMany(
+        { status: APPOINTMENT_STATUS.IN_PROGRESS, start_time: { $lt: thirtyMinAgo } },
+        { $set: { status: APPOINTMENT_STATUS.COMPLETED } },
+      );
+    },
+  }))
   .use(authRoutes)
   .use(usersRoutes)
   .use(patientsRoutes)
@@ -73,7 +84,6 @@ const app = new Elysia()
 connectMongo()
   .then(() => {
     seedAdmin().catch((err) => console.error('Admin seed error:', err));
-    startAppointmentCron();
   })
   .catch((err) => {
     console.error('Failed to connect to MongoDB', err);
