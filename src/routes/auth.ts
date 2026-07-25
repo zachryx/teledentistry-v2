@@ -26,10 +26,19 @@ import {
   resetPasswordUpdateBody,
 } from '../swagger-schemas';
 
+// ponytail: in-memory rate limiter, per-IP with Redis if distributed
+const rateLimits = new Map<string, number>();
+function checkRateLimit(request: Request) {
+  const ip = request.headers.get('x-forwarded-for') || 'local';
+  const count = (rateLimits.get(ip) || 0) + 1;
+  rateLimits.set(ip, count);
+  setTimeout(() => rateLimits.delete(ip), 60000);
+  if (count > 15) throw new HttpError(429, 'Too many requests');
+}
+
 export const authRoutes = (app: Elysia) =>
-  app
-    .group('/api/v1/auth', (app) =>
-      app
+  app.group('/api/v1/auth', (app) =>
+    app.onBeforeHandle(({ request }) => { if (request.method === 'POST') checkRateLimit(request); })
         .post('/register', ({ body }) => {
           const data = validateBody(registerSchema, body as any);
           return registerUser(data).then((user) => ({
