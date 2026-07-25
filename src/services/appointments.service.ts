@@ -111,7 +111,10 @@ export async function findHubAppointments(hubId: string, query: any) {
   const limit = Math.max(1, Number(query.limit) || 10);
   const { sort = '-created_at', status, search } = query;
 
-  const filter: any = { hub: hubId };
+  const filter: any = {};
+  if (hubId) filter.hub = hubId;
+  if (query.doctor) filter.doctor = query.doctor;
+  if (query.patient) filter.patient = query.patient;
   if (status) filter.status = status;
   if (search) {
     const regex = new RegExp(String(search), 'gi');
@@ -186,7 +189,7 @@ export async function isUserAffiliatedWithAppointment(
   return AppointmentModel.findOne({
     _id: appointmentId,
     $or: [{ hub: userId }, { doctor: userId }],
-    status: APPOINTMENT_STATUS.QUEUE,
+    status: { $in: [APPOINTMENT_STATUS.QUEUE, APPOINTMENT_STATUS.IN_PROGRESS] },
   }).lean();
 }
 

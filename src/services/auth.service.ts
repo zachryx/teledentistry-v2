@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import { findByEmail, createUser, findById, updateProfile } from './users.service';
 import { sendPasswordResetEmail } from './mailer.service';
+import { HttpError } from '../guards/http-error';
 import type { AuthUserPayload } from '../guards/auth';
 
 interface Tokens {
@@ -11,7 +13,7 @@ interface Tokens {
 export async function registerUser(body: any) {
   const existing = await findByEmail(body.email);
   if (existing) {
-    throw new Error('user already registered');
+    throw new HttpError(409, 'user already registered');
   }
   return createUser(body);
 }
@@ -22,19 +24,16 @@ export async function loginUser(
 ): Promise<{ user: any; tokens: Tokens }> {
   const user = await findByEmail(email);
   if (!user) {
-    throw new Error('Invalid credentials');
+    throw new HttpError(401, 'Invalid credentials');
   }
 
   if (!user.is_approved) {
-    throw new Error('User awaiting approval');
+    throw new HttpError(403, 'User awaiting approval');
   }
 
-  // Password is already hashed; compare via bcrypt through users.service if needed.
-  // For simplicity, assume bcrypt was used when creating users; compare here:
-  const bcrypt = await import('bcrypt');
   const match = await bcrypt.compare(password, String(user.password));
   if (!match) {
-    throw new Error('incorrect password');
+    throw new HttpError(401, 'incorrect password');
   }
 
   const tokens = generateTokens({
@@ -77,7 +76,7 @@ export async function resetPassword(token: string, password: string) {
 
   const decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload & { email: string };
   const user = await findByEmail(decoded.email);
-  if (!user) throw new Error('User not found');
+  if (!user) throw new HttpError(404, 'User not found');
 
   await updateProfile(String(user._id), { password } as any);
 }
@@ -91,7 +90,7 @@ export async function refreshAccessToken(token: string): Promise<Tokens> {
   const decoded = jwt.verify(token, refreshSecret) as jwt.JwtPayload & AuthUserPayload;
   const user = await findById(decoded.id);
   if (!user) {
-    throw new Error('user not found');
+    throw new HttpError(404, 'user not found');
   }
 
   return generateTokens({

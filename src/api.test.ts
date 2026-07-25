@@ -79,12 +79,12 @@ describe('auth', () => {
 
   test('register duplicate email', async () => {
     const res = await post('/api/v1/auth/register', { email: hubEmail, password, role: 'HUB' });
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(409);
   });
 
   test('login wrong password', async () => {
     const res = await post('/api/v1/auth/login', { email: hubEmail, password: 'wrong' });
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(401);
   });
 
   test('refresh token', async () => {

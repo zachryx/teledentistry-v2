@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { UserModel } from './models/user.model';
 
 export async function seedAdmin() {
@@ -8,7 +9,6 @@ export async function seedAdmin() {
   const existing = await UserModel.findOne({ email });
   if (existing) return;
 
-  const bcrypt = await import('bcrypt');
   const hashed = await bcrypt.hash(password, 10);
   await UserModel.create({
     email,
