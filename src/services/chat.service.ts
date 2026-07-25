@@ -12,11 +12,11 @@ export async function findChats(query: any) {
   const userId = query.hub ?? query.doctor;
 
   if (query.hub) {
-    filter.hub = new mongoose.Types.ObjectId(query.hub);
+    filter.hub = new mongoose.Types.ObjectId(String(query.hub))
   }
 
   if (query.doctor) {
-    filter.doctor = new mongoose.Types.ObjectId(query.doctor);
+    filter.doctor = new mongoose.Types.ObjectId(String(query.doctor))
   }
 
   const page = Math.max(1, Number(query.page) || 1);

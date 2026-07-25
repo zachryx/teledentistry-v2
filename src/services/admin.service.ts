@@ -61,9 +61,9 @@ export async function fetchAppointments(query: any) {
     const searchRegex = new RegExp(query.search, 'gi');
     filter.$or = [{ 'patient.full_name': searchRegex }];
   }
-  if (query.doctor) filter.doctor = new mongoose.Types.ObjectId(query.doctor);
-  if (query.hub) filter.hub = new mongoose.Types.ObjectId(query.hub);
-  if (query.patient) filter.patient = new mongoose.Types.ObjectId(query.patient);
+  if (query.doctor) filter.doctor = new mongoose.Types.ObjectId(String(query.doctor));
+  if (query.hub) filter.hub = new mongoose.Types.ObjectId(String(query.hub));
+  if (query.patient) filter.patient = new mongoose.Types.ObjectId(String(query.patient));
 
   const [docs, totalCount] = await Promise.all([
     AppointmentModel.find(filter as FilterQuery<AppointmentDocument>)

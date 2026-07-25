@@ -15,8 +15,8 @@ export async function createAppointment(
 ): Promise<AppointmentDocument> {
   const doc = await AppointmentModel.create({
     ...payload,
-    hub: new mongoose.Types.ObjectId(payload.hub),
-    patient: new mongoose.Types.ObjectId(payload.patient),
+    hub: new mongoose.Types.ObjectId(String(payload.hub)),
+    patient: new mongoose.Types.ObjectId(String(payload.patient)),
   });
   return doc.toObject() as any;
 }

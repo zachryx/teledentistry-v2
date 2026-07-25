@@ -46,7 +46,7 @@ export async function joinCall(
     { _id: call._id } as FilterQuery<CallDocument>,
     {
       [actor]: peerId,
-      $addToSet: { participants: new mongoose.Types.ObjectId(user.id) },
+      $addToSet: { participants: new mongoose.Types.ObjectId(String(user.id)) },
     },
     { new: true },
   ).lean();
