@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { authGuard } from '../guards/auth';
+import { authGuard, assertRole } from '../guards/auth';
 import { validate } from '../guards/validate';
 import {
   createPatientSchema,
@@ -22,7 +22,7 @@ export const patientsRoutes = (app: Elysia) =>
       .post(
         '/',
         ({ body, user }) => {
-          if (user.role !== 'HUB') throw new HttpError(403, 'Forbidden');
+          assertRole(user, 'HUB');
           return findByEmail(body.email).then((existing) => {
             if (existing) throw new HttpError(400, 'patient already exists');
             return createPatient({ ...body, hub: user.id }).then((patient) => ({
@@ -37,7 +37,7 @@ export const patientsRoutes = (app: Elysia) =>
       .get(
         '/hub',
         ({ query, user }) => {
-          if (user.role !== 'HUB') throw new HttpError(403, 'Forbidden');
+          assertRole(user, 'HUB');
           return findHubPatients(user.id, query).then((patients) => ({
             success: true,
             message: 'hub patients fetched successfully',
@@ -60,7 +60,7 @@ export const patientsRoutes = (app: Elysia) =>
       .patch(
         '/:id',
         ({ params, body, user }) => {
-          if (user.role !== 'HUB') throw new HttpError(403, 'Forbidden');
+          assertRole(user, 'HUB');
           return updatePatient(
             { _id: params.id, hub: user.id } as any,
             body,

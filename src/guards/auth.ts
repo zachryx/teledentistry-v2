@@ -22,3 +22,14 @@ export const authGuard = (app: Elysia) =>
       user: { id: payload.id as string, email: payload.email as string, role: payload.role as string },
     };
   });
+
+export const requireRole = (...roles: string[]) => (app: Elysia) =>
+  app.guard({
+    beforeHandle({ user }) {
+      if (!user || !roles.includes(user.role)) throw new HttpError(403, 'Forbidden');
+    },
+  });
+
+export function assertRole(user: { role?: string } | undefined, ...roles: string[]) {
+  if (!user || !roles.includes(user.role)) throw new HttpError(403, 'Forbidden');
+}

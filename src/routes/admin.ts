@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { authGuard } from '../guards/auth';
+import { authGuard, requireRole } from '../guards/auth';
 import { validate, validateBody } from '../guards/validate';
 import {
   createInvite,
@@ -25,16 +25,9 @@ import { sendInviteEmail } from '../services/mailer.service';
 import { HttpError } from '../guards/http-error';
 import { successResponse, createInviteBody } from '../swagger-schemas';
 
-const adminGuard = (app: Elysia) =>
-  app.guard({
-    beforeHandle({ user }) {
-      if (!user || user.role !== 'ADMIN') throw new HttpError(403, 'Forbidden');
-    },
-  });
-
 export const adminRoutes = (app: Elysia) =>
   app.group('/api/v1/admin', (app) =>
-    app.use(authGuard).use(adminGuard)
+    app.use(authGuard).use(requireRole('ADMIN'))
       .post('/invites', ({ body }) => {
         const { email, role } = validateBody(createInviteSchema, body as any);
         return findByEmail(email).then((exists) => {
