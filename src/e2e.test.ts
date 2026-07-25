@@ -33,8 +33,8 @@ describe('workflow: full appointment lifecycle', () => {
   });
 
   test('approve both users directly', async () => {
-    const uri = process.env.MONGO_URI || 'mongodb+srv://zechariah:LZ3dBYY0Y7oLUclC@cluster0.h0jk9xd.mongodb.net/teledenistry';
-    await mongoose.connect(uri);
+    if (!process.env.MONGO_URI) throw new Error('MONGO_URI not set — run with bun --env-file=.env test');
+    await mongoose.connect(process.env.MONGO_URI);
     await UserModel.updateMany({ _id: { $in: [hubId, doctorId] } }, { is_approved: true });
     await mongoose.disconnect();
   });
@@ -147,8 +147,8 @@ describe('workflow: admin invite flow', () => {
       body: JSON.stringify({ email: `e2e-admin${TS}@test.com`, password: 'admin123', role: 'ADMIN' }),
     }));
     const adminId = r.data._id || r.data.id;
-    const uri = process.env.MONGO_URI || 'mongodb+srv://zechariah:LZ3dBYY0Y7oLUclC@cluster0.h0jk9xd.mongodb.net/teledenistry';
-    await mongoose.connect(uri);
+    if (!process.env.MONGO_URI) throw new Error('MONGO_URI not set');
+    await mongoose.connect(process.env.MONGO_URI);
     await UserModel.updateOne({ _id: adminId }, { is_approved: true });
     await mongoose.disconnect();
     const l = await json(await fetch(`${BASE}/api/v1/auth/login`, {
@@ -215,8 +215,8 @@ describe('workflow: call session', () => {
     ]);
     hubId = rh.data._id || rh.data.id;
     doctorId = rd.data._id || rd.data.id;
-    const uri = process.env.MONGO_URI || 'mongodb+srv://zechariah:LZ3dBYY0Y7oLUclC@cluster0.h0jk9xd.mongodb.net/teledenistry';
-    await mongoose.connect(uri);
+    if (!process.env.MONGO_URI) throw new Error('MONGO_URI not set');
+    await mongoose.connect(process.env.MONGO_URI);
     await UserModel.updateMany({}, { is_approved: true });
     await mongoose.disconnect();
     const [lh, ld] = await Promise.all([

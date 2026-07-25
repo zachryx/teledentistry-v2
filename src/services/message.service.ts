@@ -8,7 +8,7 @@ import {
 export async function findMessages(chatId: string) {
   return MessageModel.find({
     chat: new mongoose.Types.ObjectId(chatId),
-  } as FilterQuery<MessageDocument>).lean();
+  } as FilterQuery<MessageDocument>).sort({ created_at: 1 }).lean();
 }
 
 export async function createMessage(attrs: MessageAttrs) {

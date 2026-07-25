@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { successResponse } from './swagger-schemas';
+import mongoose from 'mongoose';
 import { connectMongo } from './config/mongo';
 import { HttpError } from './guards/http-error';
 import { authRoutes } from './routes/auth';
@@ -49,7 +50,15 @@ const app = new Elysia()
     console.log(`${request.method} ${request.url}`);
   })
   .get('/api/v1', () => ({ success: true, message: 'Teledentistry API' }), { response: successResponse })
-  .get('/api/v1/health', () => ({ success: true, message: 'OK', timestamp: new Date().toISOString() }), { response: successResponse })
+  .get('/api/v1/health', () => {
+    const dbOk = mongoose.connection.readyState === 1;
+    return {
+      success: dbOk,
+      message: dbOk ? 'OK' : 'Database not connected',
+      db: dbOk ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+    };
+  }, { response: successResponse })
   .use(authRoutes)
   .use(usersRoutes)
   .use(patientsRoutes)

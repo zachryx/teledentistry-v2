@@ -19,13 +19,11 @@ export async function findChats(query: any) {
     filter.doctor = new mongoose.Types.ObjectId(query.doctor);
   }
 
-  if (query.page || query.limit) {
-    const page = Math.max(1, Number(query.page) || 1);
-    const limit = Math.max(1, Number(query.limit) || 10);
-    options.page = page;
-    options.limit = limit;
-    options.skip = (page - 1) * limit;
-  }
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Number(query.limit) || 10);
+  options.page = page;
+  options.limit = limit;
+  options.skip = (page - 1) * limit;
 
   const [docs, totalCount] = await Promise.all([
     ChatModel.find(filter as FilterQuery<ChatDocument>)
@@ -50,22 +48,19 @@ export async function findChats(query: any) {
     unread_messages: unreadMessages[index],
   }));
 
-  const totalPages = options.limit
-    ? Math.ceil(totalCount / options.limit)
-    : null;
-
-  const hasNextPage = totalPages ? options.page < totalPages : null;
-  const hasPrevPage = totalPages ? options.page > 1 : null;
+  const totalPages = Math.ceil(totalCount / limit) || 1;
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
 
   return {
     docs: chatsWithUnread,
-    page: options.page,
-    limit: options.limit,
+    page,
+    limit,
     totalPages,
     hasNextPage,
     hasPrevPage,
-    nextPage: hasNextPage ? options.page + 1 : null,
-    prevPage: hasPrevPage ? options.page - 1 : null,
+    nextPage: hasNextPage ? page + 1 : null,
+    prevPage: hasPrevPage ? page - 1 : null,
   };
 }
 

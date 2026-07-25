@@ -35,8 +35,8 @@ const blockedEmail = `blocked${TS}@test.com`;
 const password = 'test123';
 
 beforeAll(async () => {
-  const uri = process.env.MONGO_URI || 'mongodb+srv://zechariah:LZ3dBYY0Y7oLUclC@cluster0.h0jk9xd.mongodb.net/teledenistry';
-  await mongoose.connect(uri);
+  if (!process.env.MONGO_URI) throw new Error('MONGO_URI not set — run with bun --env-file=.env test');
+  await mongoose.connect(process.env.MONGO_URI);
 
   const r1 = await json(await post('/api/v1/auth/register', {
     email: adminEmail, password, role: 'ADMIN', first_name: 'Test', last_name: 'Admin',
@@ -520,8 +520,8 @@ describe('health & swagger', () => {
     const res = await fetch(`${BASE}/api/v1/health`);
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.success).toBe(true);
-    expect(body.message).toBe('OK');
+    expect(body.db).toBe('connected');
+    expect(body.timestamp).toBeDefined();
   });
 
   test('GET /api/v1', async () => {

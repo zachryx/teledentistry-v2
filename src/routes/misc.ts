@@ -11,6 +11,7 @@ export const miscRoutes = (app: Elysia) =>
         const formData = await request.formData();
         const file = formData.get('file') as File | null;
         if (!file) throw new HttpError(400, 'No file uploaded');
+        if (file.size > 10 * 1024 * 1024) throw new HttpError(400, 'File too large (max 10MB)');
         const buffer = Buffer.from(await file.arrayBuffer());
         const multerFile = {
           buffer,
