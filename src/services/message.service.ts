@@ -5,10 +5,21 @@ import {
   type MessageAttrs,
 } from '../models/message.model';
 
-export async function findMessages(chatId: string) {
-  return MessageModel.find({
-    chat: new mongoose.Types.ObjectId(chatId),
-  } as FilterQuery<MessageDocument>).sort({ created_at: 1 }).lean();
+export async function findMessages(chatId: string, query: any = {}) {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Number(query.limit) || 30);
+  const filter = { chat: new mongoose.Types.ObjectId(chatId) } as FilterQuery<MessageDocument>;
+
+  const [messages, total] = await Promise.all([
+    MessageModel.find(filter)
+      .sort({ created_at: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    MessageModel.countDocuments(filter),
+  ]);
+
+  return { messages, total, page, limit };
 }
 
 export async function createMessage(attrs: MessageAttrs) {

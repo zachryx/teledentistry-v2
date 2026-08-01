@@ -121,7 +121,7 @@ describe('users', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.success).toBe(true);
-    expect(Array.isArray(body.data)).toBe(true);
+    expect(Array.isArray(body.data.users)).toBe(true);
   });
 
   test('PATCH /users - update profile', async () => {
@@ -370,7 +370,7 @@ describe('chat & messages', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.success).toBe(true);
-    expect(Array.isArray(body.data)).toBe(true);
+    expect(Array.isArray(body.data.messages)).toBe(true);
   });
 
   test('DELETE /message/:id - not found', async () => {

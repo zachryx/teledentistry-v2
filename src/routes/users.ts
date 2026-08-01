@@ -7,10 +7,10 @@ import { successResponse } from '../swagger-schemas';
 export const usersRoutes = (app: Elysia) =>
   app.group('/api/v1/users', (app) =>
     app.use(authGuard).get('/', ({ user: _user, query }) =>
-      getUsers(query).then((users) => ({
+      getUsers(query).then((result) => ({
         success: true,
         message: 'users fetched successfully',
-        data: users,
+        data: result,
       }))
     , { response: successResponse }).patch('/', ({ user, body }) => {
       if (!user) throw new HttpError(401, 'Unauthorized');

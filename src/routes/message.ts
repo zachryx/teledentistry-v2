@@ -7,11 +7,11 @@ import { successResponse } from '../swagger-schemas';
 export const messageRoutes = (app: Elysia) =>
   app.group('/api/v1/message', (app) =>
     app.use(authGuard)
-      .get('/:id', ({ params }) =>
-        findMessages(params.id).then((messages) => ({
+      .get('/:id', ({ params, query }) =>
+        findMessages(params.id, query).then((result) => ({
           success: true,
           message: 'chat messages fetched successfully',
-          data: messages,
+          data: result,
         })),
         { response: successResponse },
       )

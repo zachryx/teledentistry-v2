@@ -7,22 +7,29 @@ export interface FetchUsersQuery {
   [key: string]: any;
 }
 
-export async function getUsers(query: any): Promise<UserDocument[]> {
-  const searchQuery: FetchUsersQuery = { ...query };
+export async function getUsers(query: any): Promise<{ users: UserDocument[]; total: number; page: number; limit: number }> {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Number(query.limit) || 10);
+  const filter: any = {};
 
-  if (searchQuery.search) {
-    const searchRegex = new RegExp(searchQuery.search as string, 'gi');
-
-    (searchQuery as any).$or = [
+  if (query.search) {
+    const searchRegex = new RegExp(query.search as string, 'gi');
+    filter.$or = [
       { first_name: searchRegex },
       { last_name: searchRegex },
       { hub_name: searchRegex },
     ];
-
-    delete searchQuery.search;
   }
 
-  return UserModel.find(searchQuery as FilterQuery<UserDocument>).lean() as any;
+  const [users, total] = await Promise.all([
+    UserModel.find(filter as FilterQuery<UserDocument>)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean() as any,
+    UserModel.countDocuments(filter as FilterQuery<UserDocument>),
+  ]);
+
+  return { users, total, page, limit };
 }
 
 export async function findByEmail(email: string): Promise<UserDocument | null> {
