@@ -6,9 +6,13 @@ import {
 } from '../models/appointment.model';
 import { InviteModel, type InviteDocument } from '../models/invite.model';
 
+const VALID_SORT_FIELDS = ['created_at', 'updated_at', 'first_name', 'last_name', 'email', 'role', 'status', 'hub_name'];
+
 export async function fetchUsers(query: any) {
   const page = Math.max(1, Number(query.page) || 1);
   const limit = Math.max(1, Number(query.limit) || 10);
+  const sortBy = VALID_SORT_FIELDS.includes(query.sortBy) ? query.sortBy : 'created_at';
+  const sortOrder = query.sortOrder === 'asc' ? 1 : -1;
 
   const filter: any = {
     role: { $ne: 'ADMIN' },
@@ -29,6 +33,7 @@ export async function fetchUsers(query: any) {
 
   const [docs, totalCount] = await Promise.all([
     UserModel.find(filter as FilterQuery<UserDocument>)
+      .sort({ [sortBy]: sortOrder })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),

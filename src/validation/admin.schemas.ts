@@ -10,6 +10,10 @@ export const fetchUsersQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).optional(),
   role: Joi.string().optional(),
   search: Joi.string().optional(),
+  sortBy: Joi.string()
+    .valid('created_at', 'updated_at', 'first_name', 'last_name', 'email', 'role', 'status', 'hub_name')
+    .optional(),
+  sortOrder: Joi.string().valid('asc', 'desc').optional(),
 });
 
 export const fetchInvitesQuerySchema = Joi.object({
