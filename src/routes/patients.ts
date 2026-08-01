@@ -38,10 +38,10 @@ export const patientsRoutes = (app: Elysia) =>
         '/hub',
         ({ query, user }) => {
           assertRole(user, 'HUB');
-          return findHubPatients(user.id, query).then((patients) => ({
+          return findHubPatients(user.id, query).then((result) => ({
             success: true,
             message: 'hub patients fetched successfully',
-            data: patients,
+            data: result,
           }));
         },
         { response: successResponse },

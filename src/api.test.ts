@@ -167,7 +167,7 @@ describe('patients', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.success).toBe(true);
-    expect(Array.isArray(body.data)).toBe(true);
+    expect(Array.isArray(body.data.patients)).toBe(true);
   });
 
   test('GET /patients/:id', async () => {

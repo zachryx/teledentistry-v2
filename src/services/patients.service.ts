@@ -19,19 +19,26 @@ export async function createPatient(
 export async function findHubPatients(
   hubId: string,
   query: any,
-): Promise<PatientDocument[]> {
-  const { search, ...rest } = query;
-  const filter: any = {
-    hub: hubId,
-    ...rest,
-  };
+): Promise<{ patients: PatientDocument[]; total: number; page: number; limit: number }> {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Number(query.limit) || 10);
+  const { search } = query;
+  const filter: any = { hub: hubId };
 
   if (search) {
     const regex = new RegExp(String(search), 'gi');
     filter.$or = [{ full_name: regex }, { email: regex }];
   }
 
-  return PatientModel.find(filter as FilterQuery<PatientDocument>).lean() as any;
+  const [patients, total] = await Promise.all([
+    PatientModel.find(filter as FilterQuery<PatientDocument>)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean() as any,
+    PatientModel.countDocuments(filter as FilterQuery<PatientDocument>),
+  ]);
+
+  return { patients, total, page, limit };
 }
 
 export async function findById(id: string): Promise<PatientDocument | null> {
