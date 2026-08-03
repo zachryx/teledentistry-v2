@@ -29,7 +29,7 @@ for (const key of REQUIRED_ENV) {
 }
 
 const app = new Elysia()
-  .use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], credentials: false }))
+  // .use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], credentials: false }))
   .use(swagger({ path: '/api-docs' }))
   .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET! }))
   .onError(({ error, set }) => {
