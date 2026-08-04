@@ -76,6 +76,14 @@ export const appointmentsRoutes = (app: Elysia) =>
           data: result,
         }));
       }, { response: successResponse })
+      .get('/:id/doctor', ({ params, query, user }) => {
+        if (user.role !== 'HUB' && user.id !== params.id) throw new HttpError(403, 'Not authorized to view these appointments');
+        return findDoctorAppointments(params.id, query).then((result) => ({
+          success: true,
+          message: "Doctor's appointments fetched successfully",
+          data: result,
+        }));
+      }, { response: successResponse })
       .get('/:id', ({ params }) =>
         findAppointmentById(params.id).then((appointment) => {
           if (!appointment) throw new HttpError(404, `Appointment with ID ${params.id} not found.`);
