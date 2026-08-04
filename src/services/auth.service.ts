@@ -81,7 +81,7 @@ export async function resetPassword(token: string, password: string) {
   await updateProfile(String(user._id), { password } as any);
 }
 
-export async function refreshAccessToken(token: string): Promise<Tokens> {
+export async function refreshAccessToken(token: string): Promise<string> {
   const refreshSecret = process.env.JWT_REFRESH_SECRET;
   if (!refreshSecret) {
     throw new Error('JWT_REFRESH_SECRET not configured');
@@ -100,6 +100,6 @@ export async function refreshAccessToken(token: string): Promise<Tokens> {
     email: user.email,
     id: String(user._id),
     role: user.role,
-  });
+  }).accessToken;
 }
 
