@@ -31,7 +31,7 @@ for (const key of REQUIRED_ENV) {
 const app = new Elysia()
   .use(cors())
   .use(swagger({ path: '/api-docs' }))
-  .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET! }))
+  .use(jwt({ name: 'jwt', secret: process.env.JWT_SECRET!, expiresIn: '2d' }))
   .onError(({ error, set }) => {
     const e = error as any;
     if (e.status && typeof e.status === 'number') {

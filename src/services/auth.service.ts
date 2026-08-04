@@ -53,8 +53,8 @@ export function generateTokens(payload: AuthUserPayload): Tokens {
     throw new Error('JWT secrets not configured');
   }
 
-  const accessToken = jwt.sign(payload, accessSecret, { expiresIn: '15m' });
-  const refreshToken = jwt.sign(payload, refreshSecret, { expiresIn: '7d' });
+  const accessToken = jwt.sign(payload, accessSecret, { expiresIn: '2d' });
+  const refreshToken = jwt.sign(payload, refreshSecret, { expiresIn: '14d' });
 
   return { accessToken, refreshToken };
 }
@@ -91,6 +91,9 @@ export async function refreshAccessToken(token: string): Promise<Tokens> {
   const user = await findById(decoded.id);
   if (!user) {
     throw new HttpError(404, 'user not found');
+  }
+  if (!user.is_approved) {
+    throw new HttpError(403, 'User awaiting approval');
   }
 
   return generateTokens({
