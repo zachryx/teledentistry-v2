@@ -13,18 +13,16 @@ import { SOCKET_EVENTS } from '../chat/socket-events';
 import { HttpError } from '../guards/http-error';
 import { successResponse, createCallBody, validateCallBody, joinCallBody } from '../swagger-schemas';
 
-const METERED_API_KEY = process.env.METERED_API_KEY;
+const METERED_API_KEY = process.env.METERED_API_KEY || 'fbcf78cc7bc781ffb652dd5a9f8ccfc5db2b';
 
 async function getIceServers() {
-  if (METERED_API_KEY) {
-    try {
-      const res = await fetch(`https://openrelay.metered.ca:8443/openrelay/turn/v1?username=teledentistry&credential=${METERED_API_KEY}`);
-      if (res.ok) {
-        return res.json();
-      }
-    } catch {
-      // fall through to static auth fallback
+  try {
+    const res = await fetch(`https://teledentistryoauife.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`);
+    if (res.ok) {
+      return res.json();
     }
+  } catch {
+    // fall through to static auth fallback
   }
   // ponytail: Open Relay static auth TURN — works without registration, 20GB/mo free
   return {
