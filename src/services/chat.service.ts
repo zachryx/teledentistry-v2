@@ -1,5 +1,6 @@
 import mongoose, { type FilterQuery } from 'mongoose';
 import { ChatModel, type ChatDocument } from '../models/chat.model';
+import { AppointmentModel } from '../models/appointment.model';
 import { getUnreadCount } from './message.service';
 import { USER_ROLES } from '../constants/roles';
 
@@ -92,6 +93,19 @@ export async function findChatByAppointmentParticipants(appointment: {
     doctor: appointment.doctor,
   });
   return doc.toObject();
+}
+
+export async function findChatByAppointment(appointmentId: string) {
+  const appointment = await AppointmentModel.findById(appointmentId).lean();
+  if (!appointment) return null;
+
+  return ChatModel.findOne({
+    hub: appointment.hub,
+    doctor: appointment.doctor,
+  } as FilterQuery<ChatDocument>)
+    .populate('hub')
+    .populate('doctor')
+    .lean();
 }
 
 export async function getTotalUnreadCount(userId: string, role: string) {

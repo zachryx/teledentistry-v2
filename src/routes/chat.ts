@@ -49,5 +49,11 @@ export const chatRoutes = (app: Elysia) =>
         });
         if (!chat) throw new HttpError(404, 'Chat not found');
         return { success: true, message: 'appointment chat fetched successfully', data: chat };
+      }, { response: successResponse })
+      .get('/appointment/:id', async ({ params }) => {
+        const { findChatByAppointment } = await import('../services/chat.service');
+        const chat = await findChatByAppointment(params.id);
+        if (!chat) throw new HttpError(404, 'Chat not found');
+        return { success: true, message: 'appointment chat fetched successfully', data: chat };
       }, { response: successResponse }),
   );
