@@ -13,6 +13,27 @@ import { SOCKET_EVENTS } from '../chat/socket-events';
 import { HttpError } from '../guards/http-error';
 import { successResponse, createCallBody, validateCallBody, joinCallBody } from '../swagger-schemas';
 
+const METERED_API_KEY = process.env.METERED_API_KEY;
+
+async function getIceServers() {
+  if (METERED_API_KEY) {
+    try {
+      const res = await fetch(`https://openrelay.metered.ca:8443/openrelay/turn/v1?username=teledentistry&credential=${METERED_API_KEY}`);
+      if (res.ok) {
+        return res.json();
+      }
+    } catch {
+      // fall through to defaults
+    }
+  }
+  return {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ],
+  };
+}
+
 export const callsRoutes = (app: Elysia) =>
   app.group('/api/v1/calls', (app) =>
     app.use(authGuard)
@@ -94,6 +115,14 @@ export const callsRoutes = (app: Elysia) =>
           };
         })
       , { body: joinCallBody, response: successResponse })
+      .get('/ice-servers', () =>
+        getIceServers().then((iceServers) => ({
+          success: true,
+          message: 'ICE servers fetched successfully',
+          data: iceServers,
+        })),
+        { response: successResponse },
+      )
       .get('/:appointment', ({ params }) =>
         findActiveByAppointment(params.appointment).then((call) => ({
           success: true,
