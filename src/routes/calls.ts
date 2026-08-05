@@ -23,13 +23,24 @@ async function getIceServers() {
         return res.json();
       }
     } catch {
-      // fall through to defaults
+      // fall through to static auth fallback
     }
   }
+  // ponytail: Open Relay static auth TURN — works without registration, 20GB/mo free
   return {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: 'turn:staticauth.openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayprojectsecret',
+      },
+      {
+        urls: 'turns:staticauth.openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayprojectsecret',
+      },
     ],
   };
 }
