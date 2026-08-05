@@ -2,6 +2,9 @@ import http from 'http';
 
 export function attachElysiaToNodeServer(server: http.Server, app: { fetch(req: Request): Response | Promise<Response> }) {
   server.on('request', async (req: http.IncomingMessage, res: http.ServerResponse) => {
+    // ponytail: skip /socket.io/ requests — Socket.IO handles its own HTTP
+    if (req.url?.startsWith('/socket.io/')) return;
+
     try {
       const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
@@ -27,8 +30,10 @@ export function attachElysiaToNodeServer(server: http.Server, app: { fetch(req: 
       res.writeHead(response.status, Object.fromEntries(response.headers));
       res.end(await response.text());
     } catch {
-      res.writeHead(500);
-      res.end(JSON.stringify({ success: false, message: 'Internal Server Error' }));
+      if (!res.headersSent) {
+        res.writeHead(500);
+        res.end(JSON.stringify({ success: false, message: 'Internal Server Error' }));
+      }
     }
   });
 }
