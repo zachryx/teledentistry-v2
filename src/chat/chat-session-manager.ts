@@ -1,6 +1,8 @@
 import { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS } from './socket-events';
 import { handleUserConnection, handleUserDisconnection } from '../services/users.service';
+import { findActiveByAppointment, updateCall } from '../services/calls.service';
+import { CALL_STATUS } from '../models/call.model';
 
 export interface UserSession {
   userId: string;
@@ -136,6 +138,102 @@ export class ChatSessionManager {
 
     socket.on(SOCKET_EVENTS.ERROR, async () => {
       await this.removeSession(sessionId);
+    });
+
+    // ponytail: presence tracking — when user joins/leaves call page, update host assignment
+    socket.on(SOCKET_EVENTS.CALL_PRESENCE_JOIN, async (data: { appointmentId: string; peerId: string; userId: string; role: string }) => {
+      const session = this.sessions.get(sessionId);
+      if (!session) return;
+
+      try {
+        let call = await findActiveByAppointment(data.appointmentId);
+        const actor = `${data.role.toLowerCase()}_peer_id`;
+
+        if (!call) {
+          call = await updateCall(
+            { appointment: data.appointmentId },
+            { appointment: data.appointmentId, host: data.peerId, [actor]: data.peerId, start_time: new Date(), status: CALL_STATUS.INITIATED },
+          );
+        } else if (!call.host) {
+          call = await updateCall({ _id: call._id }, { host: data.peerId, [actor]: data.peerId });
+        } else {
+          call = await updateCall({ _id: call._id }, { [actor]: data.peerId });
+        }
+
+        this.io.to(sessionId).emit(SOCKET_EVENTS.NOTIFICATION, {
+          type: 'call:presence_updated',
+          call,
+        });
+
+        const roomMembers = this.roomMembers.get(`call:${data.appointmentId}`);
+        if (roomMembers) {
+          for (const sid of roomMembers) {
+            if (sid !== sessionId) {
+              this.io.to(sid).emit(SOCKET_EVENTS.NOTIFICATION, {
+                type: 'call:participant_online',
+                peerId: data.peerId,
+                userId: data.userId,
+                role: data.role,
+                call,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('CALL_PRESENCE_JOIN error:', err);
+      }
+    });
+
+    socket.on(SOCKET_EVENTS.CALL_PRESENCE_LEAVE, async (data: { appointmentId: string; userId: string; role: string }) => {
+      const session = this.sessions.get(sessionId);
+      if (!session) return;
+
+      try {
+        const call = await findActiveByAppointment(data.appointmentId);
+        if (!call) return;
+
+        const actor = `${data.role.toLowerCase()}_peer_id`;
+        const wasHost = call.host === (call as any)[actor];
+
+        // ponytail: clear leaving user's peer_id
+        await updateCall({ _id: call._id }, { [actor]: null });
+
+        if (wasHost) {
+          const roomKey = `call:${data.appointmentId}`;
+          const members = this.roomMembers.get(roomKey);
+          const otherMembers = members ? [...members].filter((sid) => sid !== sessionId) : [];
+
+          if (otherMembers.length > 0) {
+            // Find another active participant to be host
+            const newHostSession = this.sessions.get(otherMembers[0]);
+            if (newHostSession) {
+              const updatedCall = await updateCall({ _id: call._id }, { host: null });
+              this.io.to(roomKey).emit(SOCKET_EVENTS.NOTIFICATION, {
+                type: 'call:host_left',
+                call: updatedCall,
+                leftBy: data.userId,
+              });
+            }
+          } else {
+            // No one left — end the call
+            const updatedCall = await updateCall(
+              { _id: call._id },
+              { host: null, status: CALL_STATUS.ENDED, end_time: new Date() },
+            );
+            this.io.to(roomKey).emit(SOCKET_EVENTS.NOTIFICATION, {
+              type: 'call:ended',
+              call: updatedCall,
+            });
+          }
+        } else {
+          this.io.to(`call:${data.appointmentId}`).emit(SOCKET_EVENTS.NOTIFICATION, {
+            type: 'call:participant_offline',
+            userId: data.userId,
+          });
+        }
+      } catch (err) {
+        console.error('CALL_PRESENCE_LEAVE error:', err);
+      }
     });
   }
 }
