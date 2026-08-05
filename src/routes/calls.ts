@@ -51,6 +51,23 @@ export const callsRoutes = (app: Elysia) =>
           }));
         })
       , { body: validateCallBody, response: successResponse })
+      .post('/refresh-peer', ({ body, user }) =>
+        findActiveByAppointment(body.appointment_id).then((call) => {
+          if (!call) throw new HttpError(400, "Active call session doesn't exist");
+          const actor = `${user.role.toLowerCase()}_peer_id`;
+          return updateCall(
+            { _id: call._id },
+            {
+              [actor]: body.peer_id,
+              ...(call.host === (call as any)[actor] && { host: body.peer_id }),
+            },
+          ).then((updatedCall) => ({
+            success: true,
+            message: 'Peer ID refreshed successfully',
+            data: updatedCall,
+          }));
+        })
+      , { body: validateCallBody, response: successResponse })
       .post('/join', ({ body, user }) =>
         joinCall(body.call_id, body.peer_id, user).then((joinedCall) => {
           if (joinedCall) {
