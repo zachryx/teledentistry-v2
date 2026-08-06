@@ -140,12 +140,16 @@ export class ChatSessionManager {
       await this.removeSession(sessionId);
     });
 
-    // ponytail: presence tracking — when user joins/leaves call page, update host assignment
+    // ponytail: presence tracking — only HUB can be host
     socket.on(SOCKET_EVENTS.CALL_PRESENCE_JOIN, async (data: { appointmentId: string; peerId: string; userId: string; role: string }) => {
       const session = this.sessions.get(sessionId);
       if (!session) return;
 
+      const roomKey = `call:${data.appointmentId}`;
+
       try {
+        await this.joinRoom(sessionId, roomKey);
+
         let call = await findActiveByAppointment(data.appointmentId);
         const actor = `${data.role.toLowerCase()}_peer_id`;
 
@@ -154,7 +158,8 @@ export class ChatSessionManager {
             { appointment: data.appointmentId },
             { appointment: data.appointmentId, host: data.peerId, [actor]: data.peerId, start_time: new Date(), status: CALL_STATUS.INITIATED },
           );
-        } else if (!call.host) {
+        } else if (data.role === 'HUB' && (!call.host || call.host === (call as any)[actor])) {
+          // ponytail: only HUB updates host field
           call = await updateCall({ _id: call._id }, { host: data.peerId, [actor]: data.peerId });
         } else {
           call = await updateCall({ _id: call._id }, { [actor]: data.peerId });
@@ -165,16 +170,16 @@ export class ChatSessionManager {
           call,
         });
 
-        const roomMembers = this.roomMembers.get(`call:${data.appointmentId}`);
+        const roomMembers = this.roomMembers.get(roomKey);
         if (roomMembers) {
           for (const sid of roomMembers) {
             if (sid !== sessionId) {
               this.io.to(sid).emit(SOCKET_EVENTS.NOTIFICATION, {
-                type: 'call:participant_online',
+                type: 'call:host_ready',
                 peerId: data.peerId,
                 userId: data.userId,
                 role: data.role,
-                call,
+                appointmentId: data.appointmentId,
               });
             }
           }
@@ -188,34 +193,48 @@ export class ChatSessionManager {
       const session = this.sessions.get(sessionId);
       if (!session) return;
 
+      const roomKey = `call:${data.appointmentId}`;
+
       try {
+        await this.leaveRoom(sessionId, roomKey);
+
         const call = await findActiveByAppointment(data.appointmentId);
         if (!call) return;
 
         const actor = `${data.role.toLowerCase()}_peer_id`;
         const wasHost = call.host === (call as any)[actor];
 
-        // ponytail: clear leaving user's peer_id
         await updateCall({ _id: call._id }, { [actor]: null });
 
         if (wasHost) {
-          const roomKey = `call:${data.appointmentId}`;
           const members = this.roomMembers.get(roomKey);
           const otherMembers = members ? [...members].filter((sid) => sid !== sessionId) : [];
 
           if (otherMembers.length > 0) {
-            // Find another active participant to be host
-            const newHostSession = this.sessions.get(otherMembers[0]);
-            if (newHostSession) {
-              const updatedCall = await updateCall({ _id: call._id }, { host: null });
+            // ponytail: find a HUB among remaining members to promote
+            const hubSession = otherMembers
+              .map((sid) => this.sessions.get(sid))
+              .find((s) => s && s.userId.toLowerCase() === 'hub');
+            if (hubSession) {
+              const hubPeerId = (call as any).hub_peer_id;
+              const updatedCall = await updateCall({ _id: call._id }, { host: hubPeerId });
               this.io.to(roomKey).emit(SOCKET_EVENTS.NOTIFICATION, {
-                type: 'call:host_left',
+                type: 'call:host_ready',
+                peerId: hubPeerId,
+                appointmentId: data.appointmentId,
+              });
+            } else {
+              // No hub left — end call
+              const updatedCall = await updateCall(
+                { _id: call._id },
+                { host: null, status: CALL_STATUS.ENDED, end_time: new Date() },
+              );
+              this.io.to(roomKey).emit(SOCKET_EVENTS.NOTIFICATION, {
+                type: 'call:ended',
                 call: updatedCall,
-                leftBy: data.userId,
               });
             }
           } else {
-            // No one left — end the call
             const updatedCall = await updateCall(
               { _id: call._id },
               { host: null, status: CALL_STATUS.ENDED, end_time: new Date() },
@@ -226,7 +245,7 @@ export class ChatSessionManager {
             });
           }
         } else {
-          this.io.to(`call:${data.appointmentId}`).emit(SOCKET_EVENTS.NOTIFICATION, {
+          this.io.to(roomKey).emit(SOCKET_EVENTS.NOTIFICATION, {
             type: 'call:participant_offline',
             userId: data.userId,
           });

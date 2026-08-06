@@ -85,8 +85,8 @@ export const callsRoutes = (app: Elysia) =>
         findActiveByAppointment(body.appointment_id).then((call) => {
           if (!call) throw new HttpError(400, "Active call session doesn't exist");
           const actor = `${user.role.toLowerCase()}_peer_id`;
-          // ponytail: if no host, assign this user as host
-          const isHost = !call.host || call.host === (call as any)[actor];
+          // ponytail: only HUB can be host — doctors never overwrite host
+          const isHost = user.role === 'HUB' && (!call.host || call.host === (call as any)[actor]);
           return updateCall(
             { _id: call._id },
             {
