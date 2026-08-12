@@ -81,7 +81,7 @@ export async function resetPassword(token: string, password: string) {
   await updateProfile(String(user._id), { password } as any);
 }
 
-export async function refreshAccessToken(token: string): Promise<string> {
+export async function refreshAccessToken(token: string) {
   const refreshSecret = process.env.JWT_REFRESH_SECRET;
   if (!refreshSecret) {
     throw new Error('JWT_REFRESH_SECRET not configured');
@@ -96,10 +96,17 @@ export async function refreshAccessToken(token: string): Promise<string> {
     throw new HttpError(403, 'User awaiting approval');
   }
 
-  return generateTokens({
+  const tokens = generateTokens({
     email: user.email,
     id: String(user._id),
     role: user.role,
-  }).accessToken;
+  });
+
+  const decodedAccess = jwt.decode(tokens.accessToken) as jwt.JwtPayload;
+  return {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresAt: decodedAccess?.exp ? new Date(decodedAccess.exp * 1000).toISOString() : null,
+  };
 }
 

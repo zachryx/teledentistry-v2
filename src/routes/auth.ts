@@ -51,8 +51,8 @@ export const authRoutes = (app: Elysia) =>
         }, { body: authLoginBody, response: successResponse })
         .post('/refresh-token', async ({ body }) => {
           const { token } = validateBody(refreshTokenSchema, body as any);
-          const accessToken = await refreshAccessToken(token);
-          return { success: true, message: 'access token refreshed successfully', data: { accessToken } };
+          const result = await refreshAccessToken(token);
+          return { success: true, message: 'access token refreshed successfully', data: result };
         }, { body: refreshTokenBody, response: successResponse })
         .post('/reset-password', async ({ body }) => {
           const { email } = validateBody(resetPasswordRequestSchema, body as any);
