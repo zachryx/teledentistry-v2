@@ -152,14 +152,15 @@ export class ChatSessionManager {
 
         let call = await findActiveByAppointment(data.appointmentId);
         const actor = `${data.role.toLowerCase()}_peer_id`;
+        const isHub = data.role.toLowerCase() === 'hub';
 
         if (!call) {
           call = await updateCall(
             { appointment: data.appointmentId },
             { appointment: data.appointmentId, host: data.peerId, [actor]: data.peerId, start_time: new Date(), status: CALL_STATUS.INITIATED },
+            { upsert: true },
           );
-        } else if (data.role === 'HUB' && (!call.host || call.host === (call as any)[actor])) {
-          // ponytail: only HUB updates host field
+        } else if (isHub && (!call.host || call.host === (call as any)[actor])) {
           call = await updateCall({ _id: call._id }, { host: data.peerId, [actor]: data.peerId });
         } else {
           call = await updateCall({ _id: call._id }, { [actor]: data.peerId });

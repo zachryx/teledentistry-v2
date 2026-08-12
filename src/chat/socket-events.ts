@@ -10,5 +10,6 @@ export enum SOCKET_EVENTS {
   CALL_PRESENCE_LEAVE = 'call:presence_leave',
   NOTIFICATION = 'notification',
   NOTIFICATIONS_UNREAD = 'notifications:unread',
+  WEBRTC_SIGNAL = 'webrtc:signal',
 }
 

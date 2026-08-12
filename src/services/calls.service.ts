@@ -28,8 +28,8 @@ export async function findActiveByAppointment(appointmentId: string) {
   } as FilterQuery<CallDocument>).lean();
 }
 
-export async function updateCall(query: any, payload: any) {
-  return CallModel.findOneAndUpdate(query, payload, { new: true }).lean();
+export async function updateCall(query: any, payload: any, options?: any) {
+  return CallModel.findOneAndUpdate(query, payload, { new: true, ...options }).lean();
 }
 
 export async function joinCall(
