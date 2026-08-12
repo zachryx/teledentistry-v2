@@ -103,6 +103,37 @@ export function initChatSocket(io: Server): ChatSessionManager {
         await sessionManager.leaveRoom(socket.id, body.room_id);
       });
 
+      // WEBRTC_SIGNAL — relay offer/answer/ICE to the other peer in a call room
+      socket.on(SOCKET_EVENTS.WEBRTC_SIGNAL, (data: { appointmentId: string; signal: any }) => {
+        const roomKey = `call:${data.appointmentId}`;
+        const members = (sessionManager as any).roomMembers?.get(roomKey);
+        if (!members) return;
+        for (const sid of members) {
+          if (sid !== socket.id) {
+            io.to(sid).emit(SOCKET_EVENTS.WEBRTC_SIGNAL, data.signal);
+          }
+        }
+      });
+
+      // NOTIFICATION relay — forward client-to-client notifications
+      socket.on(SOCKET_EVENTS.NOTIFICATION, (data: any) => {
+        if (data?.type === 'call:incoming') {
+          const roomKey = `call:${data.appointmentId}`;
+          const members = (sessionManager as any).roomMembers?.get(roomKey);
+          if (!members) return;
+          for (const sid of members) {
+            if (sid !== socket.id) {
+              io.to(sid).emit(SOCKET_EVENTS.NOTIFICATION, {
+                type: 'call:incoming',
+                callerPeerId: data.callerPeerId,
+                callId: data.callId,
+                appointmentId: data.appointmentId,
+              });
+            }
+          }
+        }
+      });
+
       // NOTIFICATIONS_UNREAD — push total unread count to the requesting user
       socket.on(SOCKET_EVENTS.NOTIFICATIONS_UNREAD, async () => {
         try {
